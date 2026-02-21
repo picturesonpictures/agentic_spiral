@@ -1,5 +1,5 @@
 """
-openrouter.py – thin async/sync client for the OpenRouter chat-completions API.
+openrouter.py – synchronous client for the OpenRouter chat-completions API.
 
 All LLM-backed nodes delegate here so that auth and base-URL logic live in
 one place.

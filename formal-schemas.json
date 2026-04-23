@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/file-formats.schema.json",
+  "title": "File Format Schemas — Precise Representation",
+  "description": "Structured, cross-format schemas suitable for parsing by language models and tools.",
+  "type": "object",
+  "required": ["formats"],
+  "additionalProperties": false,
+  "properties": {
+    "formats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scad", "ild", "py", "stl", "gcode", "svg", "dxf"],
+      "properties": {
+        "scad": {
+          "title": "OpenSCAD Source (.scad)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "tree" },
+            "encoding": { "const": "plain-text" },
+            "structure": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "model": { "const": "AST" },
+                "top_level": { "const": "Program" },
+                "grammar": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "Program": { "const": "Statement*" },
+                    "Statement": { "const": "VariableAssign | ModuleDef | Action" },
+                    "VariableAssign": { "const": "Identifier '=' Expression ';'" },
+                    "ModuleDef": { "const": "module Identifier '(' ParamList? ')' Block" },
+                    "Action": { "const": "Modifier* Identifier '(' ArgumentList? ')' Block?" },
+                    "Modifier": { "const": "* | ! | # | %" },
+                    "Block": { "const": "'{' Statement* '}'" },
+                    "Expression": { "const": "Number | String | Vector | Identifier | FunctionCall | BinaryOp" }
+                  }
+                }
+              }
+            },
+            "semantics": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "modifiers": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "*": { "const": "disable" },
+                    "!": { "const": "root-highlight" },
+                    "#": { "const": "debug-highlight" },
+                    "%": { "const": "background" }
+                  }
+                },
+                "csg_tree": { "const": "union/difference/intersection compose a boolean operation tree" },
+                "returns": { "const": "modules produce geometry; no data return values" }
+              }
+            }
+          }
+        },
+        "ild": {
+          "title": "ILDA Laser Show (.ild)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "chunked-binary" },
+            "byte_order": { "const": "big-endian" },
+            "frame_header": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "size_bytes": { "const": 32 },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 3,
+                    "items": { "type": "string" }
+                  },
+                  "default": [
+                    ["magic", "char[4]", "ILDA"],
+                    ["reserved1", "uint8[3]", "0"],
+                    ["format_code", "uint8", "0..4"],
+                    ["frame_name", "char[8]", "ASCII"],
+                    ["company_name", "char[8]", "ASCII"],
+                    ["num_records", "uint16"],
+                    ["frame_number", "uint16"],
+                    ["total_frames", "uint16"],
+                    ["projector_num", "uint8"],
+                    ["reserved2", "uint8", "0"]
+                  ]
+                }
+              }
+            },
+            "point_formats": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "format_1_2d_indexed": {
+                  "type": "object",
+                  "properties": {
+                    "size_bytes": { "const": 6 },
+                    "fields": {
+                      "const": ["x:int16", "y:int16", "status:uint8", "color_index:uint8"]
+                    },
+                    "status_bits": {
+                      "const": {
+                        "6": "blanking",
+                        "7": "last_point"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "py": {
+          "title": "Python Source (.py)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "tree" },
+            "encoding": { "const": "plain-text" },
+            "pipeline": {
+              "const": ["tokenize", "parse", "AST", "compile", "bytecode", "VM"]
+            },
+            "structure": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "top_level": { "const": "Module" },
+                "statement_kinds": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "default": [
+                    "FunctionDef", "ClassDef", "Import", "Assign", "Expr", "Return",
+                    "If", "For", "While", "With", "Try", "AsyncFunctionDef", "AsyncFor"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "stl": {
+          "title": "Stereolithography Mesh (.stl)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "flat-record" },
+            "encodings": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["ascii", "binary"] },
+              "const": ["ascii", "binary"]
+            },
+            "binary": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "header": { "const": "80 bytes" },
+                "triangle_count": { "const": "uint32 little-endian" },
+                "triangle_record_size": { "const": 50 },
+                "triangle_fields": { "const": ["normal[3]:float32", "v1[3]:float32", "v2[3]:float32", "v3[3]:float32", "attribute:uint16"] },
+                "file_size_formula": { "const": "84 + 50 * num_triangles" }
+              }
+            }
+          }
+        },
+        "gcode": {
+          "title": "G-Code (.gcode/.nc/.tap)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "stateful-line-stream" },
+            "encoding": { "const": "plain-text" },
+            "grammar": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "GCodeFile": { "const": "Line*" },
+                "Line": { "const": "BlockDelete? Token* Comment? Newline" },
+                "Token": { "const": "Word Number" }
+              }
+            },
+            "machine_state": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "positioning": { "enum": ["absolute", "relative"] },
+                "units": { "enum": ["mm", "inch"] },
+                "motion": { "enum": ["G0", "G1", "G2", "G3"] }
+              }
+            }
+          }
+        },
+        "svg": {
+          "title": "Scalable Vector Graphics (.svg)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "xml-dom" },
+            "namespace": { "const": "http://www.w3.org/2000/svg" },
+            "path_commands": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["M", "m", "L", "l", "H", "h", "V", "v", "C", "c", "S", "s", "Q", "q", "T", "t", "A", "a", "Z", "z"]
+              }
+            }
+          }
+        },
+        "dxf": {
+          "title": "Drawing Exchange Format (.dxf)",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "tagged-pair-stream" },
+            "encodings": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["ascii-text", "binary"] },
+              "const": ["ascii-text", "binary"]
+            },
+            "ascii_structure": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "pair": { "const": "group_code newline value newline" },
+                "eof": { "const": "0 newline EOF newline" }
+              }
+            },
+            "sections": {
+              "const": ["HEADER", "TABLES", "BLOCKS", "ENTITIES", "OBJECTS"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
